@@ -6,8 +6,10 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
+class Worldline:
+    pass
 
-class ConstAccelWorldline:
+class ConstAccelWorldline(Worldline):
     def __init__(self, proper_acc):
         self.proper_acc = proper_acc
 
@@ -23,41 +25,46 @@ class ConstAccelWorldline:
             glVertex2f(x, t)
         glEnd()
 
-class ConstVelWorldline:
+class ConstVelWorldline(Worldline):
     def __init__(self, start_pos: array, beta):
         self.start_pos = start_pos
         self.beta = beta
         self.phi = arctanh(beta)
+        self.gamma = cosh(self.phi)
 
     def draw(self):
-        velocity = array([self.beta, 1])
+        velocity = self.gamma * array([self.beta, 1])
 
-        glColor4f(0, 0.8, 0, 1)
+        glColor4f(0, 0.4, 0.8, 1)
         glLineWidth(2)
         glBegin(GL_LINES)
-
         glVertex2fv(self.start_pos - velocity * 100)
         glVertex2fv(self.start_pos + velocity * 100)
-
         glEnd()
 
-class HistoryWorldLine:
+        glColor3f(1, 0, 0)
+        glPointSize(7)
+        glBegin(GL_POINTS)
+        for marker in range(-100, 100):
+            glVertex2fv(self.start_pos + velocity * marker)
+        glEnd()
+
+class HistoryWorldLine(Worldline):
     def __init__(self):
         self.points = []
 
-    def addPoint(self, point: array, proper_time):
+    def add_point(self, point: array, proper_time):
         self.points.append((copy(point), proper_time))
 
         last_index = 0
         for i, point in enumerate(self.points):
-            if point[1] > proper_time - 3:
+            if point[1] > proper_time - 10:
                 last_index = i
                 break
 
         del self.points[:last_index]
 
     def draw(self):
-
         glLineWidth(3)
 
         glBegin(GL_LINE_STRIP)

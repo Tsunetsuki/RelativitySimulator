@@ -8,7 +8,7 @@ from OpenGL.GL import *
 class Canvas:
     def __init__(self, canvas_size, font_size):
         pygame.font.init()
-        self.font_renderer = pygame.font.Font("res/arial.ttf", font_size)
+        self.font_renderer = pygame.font.Font("res/consola.ttf", font_size)
         self.cw, self.ch = canvas_size
 
     def glText(self, text, x, y, text_color, background_color):
