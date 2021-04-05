@@ -25,12 +25,17 @@ Arrows: Change Player Velocity (Phi) instantaneously:
 
 ZERO_2D = array([0, 0])
 
-cw = 1200
-ch = 800
+cw = 1600
+ch = 900
 background_color = (0.8, 0.8, 0.8)
-instant_velocity = 0.968
+instant_velocity = 0.96
 
-paused = False
+toggles = {
+    "paused": False,
+    "transform_coords": False,
+    "has_controller": False,
+    "reset_game": False
+}
 
 #multiply a 3x2 matrix with 2-Vector to get another 2-Vector
 def matMulHom(matrix: array, pos: array):
@@ -39,6 +44,10 @@ def matMulHom(matrix: array, pos: array):
 
 def roundedString(x: number, n: int):
     return str(format(x, f".{n}f"))
+
+def maprange(s, a, b):
+    (a1, a2), (b1, b2) = a, b
+    return  b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
 
 def draw_clock(t, pos: array, clock_radius: number):
     glPushMatrix()
@@ -77,42 +86,67 @@ def draw_clock(t, pos: array, clock_radius: number):
 
     glPopMatrix()
 
-def process_controls(player, d, paused):
+def process_controls(player, d):
     run = True
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-        if event.type == pygame.KEYDOWN:
+        elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                paused = not paused
-            elif event.key == pygame.K_UP:
-                player.reset_velocity()
-            elif event.key == pygame.K_LEFT:
-                player.set_phi(arctanh(-instant_velocity))
-            elif event.key == pygame.K_RIGHT:
-                player.set_phi(arctanh(instant_velocity))
-
-
-
+                toggles["paused"] = not toggles["paused"]
+            elif event.key == pygame.K_ESCAPE:
+                run = False
+            elif not toggles["paused"]:
+                if event.key == pygame.K_UP:
+                    player.reset_velocity()
+                elif event.key == pygame.K_LEFT:
+                    player.set_phi(arctanh(-instant_velocity))
+                elif event.key == pygame.K_RIGHT:
+                    player.set_phi(arctanh(instant_velocity))
+                elif event.key == pygame.K_t:
+                    toggles["transform_coords"] = not toggles["transform_coords"]
+        elif event.type == pygame.JOYBUTTONDOWN:
+            print(event)
+            if event.button == 4:
+                toggles["transform_coords"] = not toggles["transform_coords"]
+            elif event.button == 5:
+                run = False
+            elif event.button == 6:
+                toggles["reset_game"] = True
+            elif event.button == 7:
+                toggles["paused"] = not toggles["paused"]
+        elif event.type == pygame.JOYHATMOTION:
+            pass
+        elif event.type == pygame.JOYAXISMOTION:
+            pass
 
     mouse = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
 
-    if keys[pygame.K_ESCAPE]:
-        run = False
+    if toggles["has_controller"]:
+        axis0 = pygame.joystick.Joystick(0).get_axis(0)
+        axis1 = pygame.joystick.Joystick(0).get_axis(1)
+    else:
+        axis0, axis1 = 0, 0
 
-    if not paused:
-        acc = 1
+    if not toggles["paused"]:
+        acc = 0
+        MAX_ACC = 2
+        deadzone = 0.3
+        if abs(axis0) > deadzone:
+            acc = maprange(axis0, (deadzone, 1), (0, MAX_ACC))
+        elif keys[pygame.K_a] or axis0 < -0.5:
+            acc = -MAX_ACC
+        elif keys[pygame.K_d] or axis0 > 0.5:
+            acc = MAX_ACC
 
-        if keys[pygame.K_a]:
-            player.accelerate(-d * acc)
-        if keys[pygame.K_d]:
-            player.accelerate(d * acc)
+        player.accelerate(d * acc)
 
-    return run, paused
+    return run
 
-def draw(canvas: Canvas, coord_system: CoordSystem, player: Player, npcs: List[NPC], static_objects: List[StaticObject], worldlines: List[Worldline], t, d):
+def draw(canvas: Canvas, coord_system: CoordSystem, player: Player, npcs: List[NPC], static_objects: List[StaticObject], worldlines: List[Worldline], d):
+
     glPushMatrix()
 
     phi = player.phi
@@ -130,17 +164,18 @@ def draw(canvas: Canvas, coord_system: CoordSystem, player: Player, npcs: List[N
     # wenn Spieler wieder im Mittelpunkt stehen soll, Worldlines + NPCs nach Transformation zeichnen!
 
     glPushMatrix()
-    glMultMatrixd(lorentzTransform)
+    #glMultMatrixd(mat_inv(lorentzTransform))
     glTranslated(-player.pos[0], -player.pos[1], 0)
     glPopMatrix()
 
 
-    #glMultMatrixd(lorentzTransform)
+    if toggles["transform_coords"]:
+        glMultMatrixd(lorentzTransform)
+
     glTranslated(-player.pos[0], -player.pos[1], 0)#this is just to follow the player around
 
-
     coord_system.draw()
-    player.draw()
+
 
     for worldline in worldlines:
         worldline.draw()
@@ -151,12 +186,14 @@ def draw(canvas: Canvas, coord_system: CoordSystem, player: Player, npcs: List[N
     for static_object in static_objects:
         static_object.draw()
 
+    player.draw()
+
     glPopMatrix()
 
     #UI
     canvas.glText("FPS: " + roundedString(1 / d, 0), 20, 0, (0, 0, 0), (1, 1, 1))
     canvas.glText("Φ: " + roundedString(phi, 2), 20, 25, (0, 0, 0.8), (1, 1, 1))
-    canvas.glText("β: " + roundedString(tanh(phi), 2), 20, 50, (0, 0, 0.8), (1, 1, 1))
+    canvas.glText("β: " + roundedString(tanh(phi), 8), 20, 50, (0, 0, 0.8), (1, 1, 1))
     canvas.glText("γ: " + roundedString(cosh(phi), 2), 20, 75, (0, 0, 0.8), (1, 1, 1))
     canvas.glText("τ: " + roundedString(player.proper_time, 2), 20, 100, (0, 0, 0.8), (1, 1, 1))
     canvas.glText("Pos: " + str(player.pos.round(2)), 20, 125, (0, 0, 0.8), (1, 1, 1))
@@ -171,30 +208,63 @@ def draw(canvas: Canvas, coord_system: CoordSystem, player: Player, npcs: List[N
 
 
 def loop(clock, canvas, coord_system, player, npcs, static_objects, worldlines):
-    global paused
+    global toggles
 
     d = clock.tick() / 1000
     t = pygame.time.get_ticks() / 1000
 
-    run, paused = process_controls(player, d, paused)
+    run = process_controls(player, d)
 
-    if not paused:
+    if not toggles["paused"]:
 
         #move objects
         player.step(d)
-        for npc in npcs:
-            npc.step(d, player.phi)# * cosh(player.phi))
+        #for npc in npcs:
+        #    npc.step(d, player.phi)# * cosh(player.phi))
 
         #print(f"{npcs[0].phi} - {player.phi} = {npcs[0].phi - player.phi} => γ = {cosh(npcs[0].phi - player.phi)}")
 
         worldlines[-1].add_point(player.pos, player.proper_time)
 
-    draw(canvas, coord_system, player, npcs, static_objects, worldlines, t, d)
+    draw(canvas, coord_system, player, npcs, static_objects, worldlines, d)
 
     return (run)
 
+def init_game(scale):
+    player = Player(array([0, 0]), 0, 300 * scale)
+    coord_system = CoordSystem(-1000, 1000, 1, -1000, 1000, 1, (0, 0, 0), draw_light_lines=False)
+
+    # for i in range(1, 5):
+    # worldlines.append(ConstAccelWorldline(1/i))
+
+    npcs = []  # [NPC(array([2, 0]), 0.5, (0.5, 0, 0.5), 300 * scale)]
+    # NPC(array([2, 0]), 0.5, (0.5, 0, 0.5), 200 * scale),
+    # NPC(array([3, 0]), 0.5, (0.5, 0, 0.5), 200 * scale),
+    # NPC(array([6, 0]), 0, (0, 0, 0.5), 200 * scale)]
+
+    static_objects = [StaticObject(array([0, 8]), 400 * scale)]
+
+    worldlines = []
+    # for npc in npcs:
+    #    worldlines.append(ConstVelWorldline(npc.pos.copy(), npc.beta, player))
+
+    for x0 in range(0, 2, 2):
+        worldlines.append(ConstVelWorldline(array([x0, 0]), 0, player))
+
+    worldlines.append(HistoryWorldLine())
+
+    return coord_system, player, npcs, static_objects, worldlines
+
 def main():
     pygame.init()
+    pygame.joystick.init()
+
+    joysticks = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+
+    toggles["has_controller"] = (len(joysticks) > 0)
+
+    #pygame.joystick.Joystick(0)
+
     clock = pygame.time.Clock()
 
     pygame.display.gl_set_attribute(GL_MULTISAMPLEBUFFERS, 1)
@@ -207,30 +277,14 @@ def main():
 
     canvas = Canvas((cw, ch), 25)
 
-    player = Player(array([0, 0]),00, 300 * scale)
-    coord_system = CoordSystem(-1000, 1000, 1, -1000, 1000, 1, (0, 0, 0), draw_light_lines=True)
-
-    #for i in range(1, 5):
-        #worldlines.append(ConstAccelWorldline(1/i))
-
-    npcs = [NPC(array([0, 0]), 0, (0.5, 0, 0.5), 300 * scale)]
-        #NPC(array([2, 0]), 0.5, (0.5, 0, 0.5), 200 * scale),
-            #NPC(array([3, 0]), 0.5, (0.5, 0, 0.5), 200 * scale),
-            #NPC(array([6, 0]), 0, (0, 0, 0.5), 200 * scale)]
-
-    static_objects = [StaticObject(array([0, 8]), 400 * scale)]
-
-
-    worldlines = []
-    for npc in npcs:
-        worldlines.append(ConstVelWorldline(npc.pos.copy(), npc.beta))
-
-    worldlines.append(HistoryWorldLine())
-
-    #coord_system_transformed = CoordSystem(-100, 100, 1, -100, 100, 1, (0, 0.4, 0), False)
+    coord_system, player, npcs, static_objects, worldlines = init_game(scale)
 
     run = True
     while run:
+        if toggles["reset_game"]:
+            coord_system, player, npcs, static_objects, worldlines = init_game(scale)
+            toggles["reset_game"] = False
+
         run = loop(clock, canvas, coord_system, player, npcs, static_objects, worldlines)
     pygame.quit()
 

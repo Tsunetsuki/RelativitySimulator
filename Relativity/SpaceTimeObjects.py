@@ -73,6 +73,12 @@ class Player:
         self.beta = tanh(phi)
         self.gamma = cosh(phi)
 
+    def get_basis_x(self):
+        return self.gamma * array([1, self.beta])
+
+    def get_basis_t(self):
+        return self.gamma * array([self.beta, 1])
+
     def step(self, d):
         self.proper_time += d
 
