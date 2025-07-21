@@ -22,7 +22,7 @@ class CoordSystem:
     def draw(self):
         #grid
         r, g, b = self.color
-        glColor4f(r, g, b, 0.5)
+        glColor4f(r, g, b, 0.3)
         glLineWidth(1)
         glLineStipple(1, 0xF0F0)
         glEnable(GL_LINE_STIPPLE)

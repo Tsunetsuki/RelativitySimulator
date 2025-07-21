@@ -5,16 +5,23 @@ import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 
+
 class Canvas:
     def __init__(self, canvas_size, font_size):
         pygame.font.init()
-        self.font_renderer = pygame.font.Font("res/arial.ttf", font_size)
+        self.font_renderer = pygame.font.Font("Relativity/res/consola.ttf", font_size)
         self.cw, self.ch = canvas_size
 
     def glText(self, text, x, y, text_color, background_color):
-        text_img = self.font_renderer.render(text, True, [255 * color for color in text_color],
-                                        [255 * color for color in background_color])
-        img_as_array = transpose(pygame.surfarray.array3d(text_img).astype(uint8), (1, 0, 2))
+        text_img = self.font_renderer.render(
+            text,
+            True,
+            [255 * color for color in text_color],
+            [255 * color for color in background_color],
+        )
+        img_as_array = transpose(
+            pygame.surfarray.array3d(text_img).astype(uint8), (1, 0, 2)
+        )
 
         iw = text_img.get_width()
         ih = text_img.get_height()
@@ -30,7 +37,9 @@ class Canvas:
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, iw, ih, 0, GL_RGB, GL_UNSIGNED_BYTE, img_as_array)
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGB, iw, ih, 0, GL_RGB, GL_UNSIGNED_BYTE, img_as_array
+        )
         glGenerateMipmap(GL_TEXTURE_2D)
 
         # drawImage(text_img, 0, 0, text_img.get_width(), text_img.get_height(), 0)

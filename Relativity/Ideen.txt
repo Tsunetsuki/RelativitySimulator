@@ -2,18 +2,6 @@ Ziel: So schnell wie möglich an Ziel kommen durch viel Beschleunigen
 
 Gegner könnten programmiert werden, weil sie nicht wie Menschen das Spiel in Echtzeit erleben müssen. Zeit ist insb. Die gleiche für Spieler und Gegner, wenn sie an einem Ort sind (Synchronisierung) => Melee-Angriffe/Kugeln möglich?
 
-
 Eigenzeit durch Farbe von Kugel repräsentieren, später Uhren
 
-Player ist immer im stationary FoR,
-Objekte sind evtl. bewegt
-
-Sauber unterscheiden zwischen 3 FoRs:
-    1. FoR am Start des Spiels
-    2. Spieler
-    3. NPC (jeweils verschieden)
-=> jeder FoR hat eigene Basis ausgedrückt durch Matrix (Lorentz-T)
-
-
-Position im originalen FoR speichern
-Geschwindigkeit mit eigenen Basisvektoren dazurechnen
+Laufbahnen, die nicht in Echtzeit berechnet werden können, vor Spielstart berechenen
