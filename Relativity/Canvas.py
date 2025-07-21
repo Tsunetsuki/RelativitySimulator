@@ -1,26 +1,63 @@
+from OpenGL.GL import (
+    GL_NEAREST,
+    GL_QUADS,
+    GL_REPEAT,
+    GL_RGB,
+    GL_TEXTURE0,
+    GL_TEXTURE_2D,
+    GL_TEXTURE_MAG_FILTER,
+    GL_TEXTURE_MIN_FILTER,
+    GL_TEXTURE_WRAP_S,
+    GL_TEXTURE_WRAP_T,
+    GL_UNPACK_ALIGNMENT,
+    GL_UNSIGNED_BYTE,
+    glActiveTexture,
+    glBegin,
+    glColor3fv,
+    glDeleteTextures,
+    glDisable,
+    glEnable,
+    glEnd,
+    glGenTextures,
+    glBindTexture,
+    glPopMatrix,
+    glScale,
+    glTranslate,
+    glGenerateMipmap,
+    glLoadIdentity,
+    glPixelStorei,
+    glPushMatrix,
+    glTexCoord2f,
+    glTexImage2D,
+    glTexParameteri,
+    glVertex2f,
+)
 import numpy as np
-from numpy import *
-from numpy.linalg import inv as mat_inv
 import pygame
-from pygame.locals import *
-from OpenGL.GL import *
 
 
 class Canvas:
-    def __init__(self, canvas_size, font_size):
+    def __init__(self, canvas_size: tuple[int, int], font_size: int) -> None:
         pygame.font.init()
         self.font_renderer = pygame.font.Font("Relativity/res/consola.ttf", font_size)
         self.cw, self.ch = canvas_size
 
-    def glText(self, text, x, y, text_color, background_color):
+    def glText(
+        self,
+        text: str,
+        x: int,
+        y: int,
+        text_color: tuple[float, float, float],
+        background_color: tuple[float, float, float],
+    ) -> None:
         text_img = self.font_renderer.render(
             text,
             True,
-            [255 * color for color in text_color],
-            [255 * color for color in background_color],
+            [int(255 * color) for color in text_color],
+            [int(255 * color) for color in background_color],
         )
-        img_as_array = transpose(
-            pygame.surfarray.array3d(text_img).astype(uint8), (1, 0, 2)
+        img_as_array = np.transpose(
+            pygame.surfarray.array3d(text_img).astype(np.uint8), (1, 0, 2)
         )
 
         iw = text_img.get_width()

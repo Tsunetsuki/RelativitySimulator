@@ -1,17 +1,40 @@
+from dataclasses import dataclass
+from OpenGL.GL import (
+    GL_BLEND,
+    GL_COLOR_BUFFER_BIT,
+    GL_DEPTH_BUFFER_BIT,
+    GL_LINE_LOOP,
+    GL_LINES,
+    GL_POLYGON,
+    GL_SRC_ALPHA,
+    GL_ONE_MINUS_SRC_ALPHA,
+    glBegin,
+    glBlendFunc,
+    glClear,
+    glClearColor,
+    glColor3f,
+    glEnable,
+    glEnd,
+    glLineWidth,
+    glLoadIdentity,
+    glPopMatrix,
+    glPushMatrix,
+    glTranslated,
+    glTranslatef,
+    glVertex2fv,
+    glTranslate,
+    glScale,
+    glMultMatrixd,
+)
 import numpy as np
-from numpy import *
-from numpy.linalg import inv as mat_inv
+from numpy import arctanh, array, sinh, cosh, tanh, sin, cos, pi
+from numpy.typing import NDArray
 import pygame
-from pygame.locals import *
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from pygame.locals import DOUBLEBUF, GL_MULTISAMPLEBUFFERS, OPENGL
 
-from Relativity import SpaceTimeObjects, Worldlines, CoordSystem, Canvas
-
-
-from typing import List, Tuple
-
-from Relativity import SpaceTimeObjects
+from Relativity import SpaceTimeObjects, Worldlines
+from Relativity.Canvas import Canvas
+from Relativity.CoordSystem import CoordSystem
 
 """
 ESC: Quit
@@ -39,7 +62,16 @@ toggles = {
 }
 
 
-def glBall(pos: array, radius):
+@dataclass
+class GameState:
+    coord_system: CoordSystem
+    player: SpaceTimeObjects.Player
+    npcs: list[SpaceTimeObjects.NPC]
+    static_objects: list[SpaceTimeObjects.StaticObject]
+    worldlines: list[Worldlines.Worldline]
+
+
+def glBall(pos: NDArray[np.float_], radius: float) -> None:
     sides = 32
 
     glPushMatrix()
@@ -57,7 +89,7 @@ def glBall(pos: array, radius):
     glPopMatrix()
 
 
-def lorentz_transform(phi):
+def lorentz_transform(phi: float) -> NDArray[np.float_]:
     return array(
         [
             [cosh(phi), -sinh(phi), 0, 0],
@@ -68,16 +100,16 @@ def lorentz_transform(phi):
     )
 
 
-def roundedString(x: number, n: int):
+def roundedString(x: float, n: int) -> str:
     return str(format(x, f".{n}f"))
 
 
-def maprange(s, a, b):
+def maprange(s: float, a: tuple[float, float], b: tuple[float, float]) -> float:
     (a1, a2), (b1, b2) = a, b
     return b1 + ((s - a1) * (b2 - b1) / (a2 - a1))
 
 
-def draw_clock(t, pos: array, clock_radius: number):
+def draw_clock(t: float, pos: tuple[float, float], clock_radius: float) -> None:
     glPushMatrix()
     glLoadIdentity()
     glTranslate(-1, 1, 0)
@@ -115,7 +147,7 @@ def draw_clock(t, pos: array, clock_radius: number):
     glPopMatrix()
 
 
-def glCircle(pos: array, radius, thickness):
+def glCircle(pos: NDArray[np.float_], radius: float, thickness: float) -> None:
     sides = 32
 
     glLineWidth(thickness)
@@ -135,7 +167,7 @@ def glCircle(pos: array, radius, thickness):
     glPopMatrix()
 
 
-def process_controls(player, d):
+def process_controls(player: SpaceTimeObjects.Player, d: float) -> bool:
     run = True
 
     for event in pygame.event.get():
@@ -181,21 +213,21 @@ def process_controls(player, d):
         elif event.type == pygame.JOYAXISMOTION:
             pass
 
-    mouse = pygame.mouse.get_pressed()
+    # mouse = pygame.mouse.get_pressed()
     keys = pygame.key.get_pressed()
 
     if toggles["has_controller"]:
         axis0 = pygame.joystick.Joystick(0).get_axis(0)
-        axis1 = pygame.joystick.Joystick(0).get_axis(1)
+        _ = pygame.joystick.Joystick(0).get_axis(1)
     else:
-        axis0, axis1 = 0, 0
+        axis0, _ = 0, 0
 
     if not toggles["paused"]:
-        acc = 0
-        MAX_ACC = 2
+        acc = 0.0
+        MAX_ACC = 2.0
         deadzone = 0.3
         if abs(axis0) > deadzone:
-            acc = maprange(axis0, (deadzone, 1), (0, MAX_ACC))
+            acc = maprange(axis0, (deadzone, 1.0), (0.0, MAX_ACC))
         elif keys[pygame.K_a] or axis0 < -0.5:
             acc = -MAX_ACC
         elif keys[pygame.K_d] or axis0 > 0.5:
@@ -208,50 +240,46 @@ def process_controls(player, d):
 
 def draw(
     canvas: Canvas,
-    coord_system: CoordSystem,
-    player,
-    npcs,
-    static_objects,
-    worldlines,
-    d,
-):
+    game_state: GameState,
+    d: float,
+) -> None:
 
     glPushMatrix()
 
-    phi = player.phi
+    phi = game_state.player.phi
 
     lorentzTransform = lorentz_transform(phi)
 
     r, g, b = background_color
     glClearColor(r, g, b, 255)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)  # type:ignore
 
     # wenn Spieler wieder im Mittelpunkt stehen soll, Worldlines + NPCs nach Transformation zeichnen!
 
     glPushMatrix()
     # glMultMatrixd(mat_inv(lorentzTransform))
-    glTranslated(-player.pos[0], -player.pos[1], 0)
+    glTranslated(-game_state.player.pos[0], -game_state.player.pos[1], 0)
     glPopMatrix()
 
     if toggles["transform_coords"]:
         glMultMatrixd(lorentzTransform)
 
     glTranslated(
-        -player.pos[0], -player.pos[1], 0
+        -game_state.player.pos[0], -game_state.player.pos[1], 0
     )  # this is just to follow the player around
 
-    coord_system.draw()
+    game_state.coord_system.draw()
 
-    for worldline in worldlines:
+    for worldline in game_state.worldlines:
         worldline.draw()
 
-    for npc in npcs:
-        pass  # npc.draw()
+    # for npc in npcs:
+    #     npc.draw()
 
-    for static_object in static_objects:
+    for static_object in game_state.static_objects:
         static_object.draw()
 
-    player.draw()
+    game_state.player.draw()
 
     glPopMatrix()
 
@@ -261,61 +289,72 @@ def draw(
     canvas.glText("β: " + roundedString(tanh(phi), 8), 20, 50, (0, 0, 0.8), (1, 1, 1))
     canvas.glText("γ: " + roundedString(cosh(phi), 2), 20, 75, (0, 0, 0.8), (1, 1, 1))
     canvas.glText(
-        "τ: " + roundedString(player.proper_time, 2), 20, 100, (0, 0, 0.8), (1, 1, 1)
+        "τ: " + roundedString(game_state.player.proper_time, 2),
+        20,
+        100,
+        (0, 0, 0.8),
+        (1, 1, 1),
     )
-    canvas.glText("Pos: " + str(player.pos.round(2)), 20, 125, (0, 0, 0.8), (1, 1, 1))
     canvas.glText(
-        "     " + str((lorentzTransform[:2, :2] @ player.pos).round(2)),
+        "Pos: " + str(game_state.player.pos.round(2)), 20, 125, (0, 0, 0.8), (1, 1, 1)
+    )
+    canvas.glText(
+        "     " + str((lorentzTransform[:2, :2] @ game_state.player.pos).round(2)),
         20,
         150,
         (0, 0, 0.8),
         (1, 1, 1),
     )
 
-    draw_clock(player.proper_time / 10, (cw * 0.9, ch * 0.1), 50)
+    draw_clock(game_state.player.proper_time / 10, (cw * 0.9, ch * 0.1), 50)
     # draw_clock(player.proper_time * 10, (cw * 0.9, ch * 0.1), 30)
 
     pygame.display.flip()
 
 
-def loop(clock, canvas, coord_system, player, npcs, static_objects, worldlines):
+def loop(clock: pygame.time.Clock, canvas: Canvas, game_state: GameState) -> bool:
     global toggles
 
     d = clock.tick() / 1000
-    t = pygame.time.get_ticks() / 1000
+    # t = pygame.time.get_ticks() / 1000
 
-    run = process_controls(player, d)
+    run = process_controls(game_state.player, d)
 
     if not toggles["paused"]:
 
         # move objects
-        player.step(d)
+        game_state.player.step(d)
         # for npc in npcs:
         #    npc.step(d, player.phi)# * cosh(player.phi))
 
-        # print(f"{npcs[0].phi} - {player.phi} = {npcs[0].phi - player.phi} => γ = {cosh(npcs[0].phi - player.phi)}")
+        history_worldline = game_state.worldlines[-1]
+        assert isinstance(history_worldline, Worldlines.HistoryWorldLine)
 
-        worldlines[-1].add_point(player.pos, player.proper_time)
+        history_worldline.add_point(
+            game_state.player.pos, game_state.player.proper_time
+        )
 
-    draw(canvas, coord_system, player, npcs, static_objects, worldlines, d)
+    draw(canvas, game_state, d)
 
     return run
 
 
-def init_game(scale):
+def init_game(
+    scale: float,
+) -> GameState:
     player = SpaceTimeObjects.Player(array([0, 0]), 0, 300 * scale)
-    coord_system = CoordSystem.CoordSystem(
+    coord_system = CoordSystem(
         -1000, 1000, 10, -1000, 1000, 10, (0, 0, 0), draw_light_lines=False
     )
 
     # for i in range(1, 5):
     # worldlines.append(ConstAccelWorldline(1/i))
 
-    npcs = []
+    npcs: list[SpaceTimeObjects.NPC] = []
 
     static_objects = [SpaceTimeObjects.StaticObject(array([0, 8]), 400 * scale)]
 
-    worldlines = []
+    worldlines: list[Worldlines.Worldline] = []
 
     # for phi in linspace(-5, 5, 2):
     worldlines.append(
@@ -331,10 +370,10 @@ def init_game(scale):
 
     worldlines.append(Worldlines.HistoryWorldLine())
 
-    return coord_system, player, npcs, static_objects, worldlines
+    return GameState(coord_system, player, npcs, static_objects, worldlines)
 
 
-def main():
+def main() -> None:
     pygame.init()
     pygame.joystick.init()
 
@@ -349,27 +388,26 @@ def main():
     clock = pygame.time.Clock()
 
     pygame.display.gl_set_attribute(GL_MULTISAMPLEBUFFERS, 1)
-    win = pygame.display.set_mode((cw, ch), DOUBLEBUF | OPENGL)
+    _ = pygame.display.set_mode((cw, ch), DOUBLEBUF | OPENGL)
     glScale(1, cw / ch, 1)
     scale = 0.05
     glScale(scale, scale, scale)
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-    canvas = Canvas.Canvas((cw, ch), 25)
+    canvas = Canvas((cw, ch), 25)
 
-    coord_system, player, npcs, static_objects, worldlines = init_game(scale)
+    game_state: GameState = init_game(scale)
 
     run = True
     while run:
         if toggles["reset_game"]:
-            coord_system, player, npcs, static_objects, worldlines = init_game(scale)
+            game_state = init_game(scale)
             toggles["reset_game"] = False
 
-        run = loop(
-            clock, canvas, coord_system, player, npcs, static_objects, worldlines
-        )
+        run = loop(clock, canvas, game_state)
     pygame.quit()
 
 
-main()
+if __name__ == "__main__":
+    main()

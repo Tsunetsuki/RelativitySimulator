@@ -1,0 +1,12 @@
+[tool.mypy]
+disallow_untyped_defs = true
+exclude = [
+    'Relativity/Tests', # beginning with a dot
+]
+
+
+# follow_imports = 'skip'
+ignore_missing_imports = true
+
+# plugins = ["numpy.typing.mypy_plugin"]
+

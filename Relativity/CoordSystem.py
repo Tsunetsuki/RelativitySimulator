@@ -1,13 +1,32 @@
-import numpy as np
-from numpy import *
-from numpy.linalg import inv as mat_inv
-import pygame
-from pygame.locals import *
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from OpenGL.GL import (
+    GL_LINE_STIPPLE,
+    GL_LINES,
+    glBegin,
+    glColor4f,
+    glDisable,
+    glEnable,
+    glEnd,
+    glLineStipple,
+    glLineWidth,
+    glBegin,
+    glEnable,
+    glEnd,
+    glVertex2f,
+)
+
 
 class CoordSystem:
-    def __init__(self, min_x, max_x, x_spacing, min_y, max_y, y_spacing, color=(0, 0, 0), draw_light_lines=False):#, b1: array, b2: array):
+    def __init__(
+        self,
+        min_x: int,
+        max_x: int,
+        x_spacing: int,
+        min_y: int,
+        max_y: int,
+        y_spacing: int,
+        color: tuple[int, int, int] = (0, 0, 0),
+        draw_light_lines: bool = False,
+    ) -> None:  # , b1: array, b2: array):
         self.min_x = min_x
         self.max_x = max_x
         self.x_spacing = x_spacing
@@ -19,8 +38,8 @@ class CoordSystem:
         self.color = color
         self.draw_light_lines = draw_light_lines
 
-    def draw(self):
-        #grid
+    def draw(self) -> None:
+        # grid
         r, g, b = self.color
         glColor4f(r, g, b, 0.3)
         glLineWidth(1)
@@ -39,7 +58,7 @@ class CoordSystem:
 
         glDisable(GL_LINE_STIPPLE)
 
-        #axes
+        # axes
         glColor4f(r, g, b, 1)
         glLineWidth(3)
         glBegin(GL_LINES)
@@ -49,7 +68,7 @@ class CoordSystem:
         glVertex2f(self.max_x, 0)
         glEnd()
 
-        #light lines
+        # light lines
         if self.draw_light_lines:
             glColor4f(1, 1, 0, 1)
             glLineWidth(2)
